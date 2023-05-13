@@ -35,58 +35,150 @@ import os
 
 # ======================================================================================
 # Definindo funções
+class SumarizacaoAmount:
 
-def json_to_columns(df: pd.DataFrame, json_column: str) -> pd.DataFrame:
-    """
-    Função para transformar colunas de um json em colunas de um dataframe
-        :param df: dataframe
-        :param json_column: nome da coluna que contém o json
-        :return: dataframe com as colunas do json
-    """
-    exploded = pd.json_normalize(df[json_column].apply(eval))
+    def __init__(self):
+        pass
   
-    # Renomeando as colunas do dataframe afim de evitar conflitos
-    exploded = exploded.rename(columns=lambda x: x.replace(json_column, f"{json_column}_{x}"))
-    df = pd.concat([df, exploded], axis=1)
 
+    def json_to_columns(self, df: pd.DataFrame, json_column: str) -> pd.DataFrame:
+
+        """
+        Função para transformar colunas de um json em colunas de um dataframe
+            :param df: dataframe
+            :param json_column: nome da coluna que contém o json
+            :return: dataframe com as colunas do json
+        """
+        exploded = pd.json_normalize(df[json_column].apply(eval))
     
-    df = df.drop(json_column, axis=1)
-    return df
+        # Renomeando as colunas do dataframe afim de evitar conflitos
+        exploded = exploded.rename(columns=lambda x: x.replace(json_column, f"{json_column}_{x}"))
+        df = pd.concat([df, exploded], axis=1)
 
-#---------------------------------------------------------------------------------------#
+        
+        df = df.drop(json_column, axis=1)
+        return df
 
-def summarize_month(df: pd.DataFrame, column_agg: str, column_date: str, month: int, year: int) -> pd.DataFrame:
-    """
-    Função para sumarizar os valores de uma coluna de um dataframe
-        :param df: dataframe
-        :param column_agg: coluna que será sumarizada
-        :param column_date: coluna que será agrupada
-        :param month: mês
-        :param year: ano
-        :return: dataframe com a coluna sumarizada
-    """
-    df[column_date] = pd.to_datetime(df[column_date])
-    df = df[(df[column_date].dt.month == month) & (df[column_date].dt.year == year)]
-    df[column_date] = df[column_date].dt.strftime('%Y-%m') 
-    df[column_agg] = df[column_agg].astype(float)
-    df = df.groupby(column_date).agg({column_agg: 'sum'}).reset_index()
-    return df
+    #---------------------------------------------------------------------------------------#
 
+    def summarize_month(self, df: pd.DataFrame, column_agg: str, column_date: str, month: int, year: int) -> pd.DataFrame:
+        """
+        Função para sumarizar os valores de uma coluna de um dataframe
+            :param df: dataframe
+            :param column_agg: coluna que será sumarizada
+            :param column_date: coluna que será agrupada
+            :param month: mês
+            :param year: ano
+            :return: dataframe com a coluna sumarizada
+        """
+        df[column_date] = pd.to_datetime(df[column_date])
+        df = df[(df[column_date].dt.month == month) & (df[column_date].dt.year == year)]
+        df = df[[column_date, column_agg]].fillna(0)
+        df[column_agg] = df[column_agg].astype(float)
+        value = df[column_agg].sum()
+        return value
+    
+    #---------------------------------------------------------------------------------------#
+    
+    def summarize_by_month(self, df: pd.DataFrame, column_agg: str, column_date: str) -> pd.DataFrame:
+        """
+        Função para sumarizar os valores de uma coluna de um dataframe
+            :param df: dataframe
+            :param column_agg: coluna que será sumarizada
+            :param column_date: coluna que será agrupada
+            :return: dataframe com a coluna sumarizada
+        """
+        df[column_date] = pd.to_datetime(df[column_date])
+        df[column_date] = df[column_date].dt.strftime('%Y-%m')
+        df[column_agg] = df[column_agg].astype(float)
+        df = df[[column_date, column_agg]].fillna(0)
+        df = df.groupby([column_date]).sum().reset_index()
+        return df
+    
+
+    #---------------------------------------------------------------------------------------#
+
+    def read_file(self, path: str, file: str, sep: str, encoding: str, header: int, index_col: int) -> pd.DataFrame:
+        """
+        Função para ler um arquivo csv
+            :param path: caminho do arquivo
+            :param file: nome do arquivo
+            :param sep: separador
+            :param encoding: encoding do arquivo
+            :param header: linha do cabeçalho
+            :param index_col: coluna que será utilizada como índice
+            :return: dataframe
+        """
+        df = pd.read_csv(f"{path}/{file}", sep=sep, encoding=encoding, header=header, index_col=index_col)
+        return df
+
+    #---------------------------------------------------------------------------------------#
+
+    def transform_data(self, month: int, year: int,  path: str, file: str, sep: str, encoding: str, header: int, index_col: int) -> pd.DataFrame:
+        """
+        Função para transformar os dados
+            :param month: mês
+            :param year: ano
+            :param path: caminho do arquivo
+            :param file: nome do arquivo
+            :param sep: separador
+            :param encoding: encoding do arquivo
+            :param header: linha do cabeçalho
+            :param index_col: coluna que será utilizada como índice
+            :return: dataframe
+            """
+        df = self.read_file(path, file, sep, encoding, header, index_col)
+        df = self.json_to_columns(df, 'json_response')
+        df = self.summarize_month(df, 'amount', 'created_at', month, year)
+        return df
+    
+    #---------------------------------------------------------------------------------------#
+    def resume_by_month(self, path: str, file: str, sep: str, encoding: str, header: int, index_col: int) -> pd.DataFrame:
+        """
+        Função para transformar os dados
+            :param month: mês
+            :param year: ano
+            :param path: caminho do arquivo
+            :param file: nome do arquivo
+            :param sep: separador
+            :param encoding: encoding do arquivo
+            :param header: linha do cabeçalho
+            :param index_col: coluna que será utilizada como índice
+            :return: dataframe
+            """
+        df = self.read_file(path, file, sep, encoding, header, index_col)
+        df = self.json_to_columns(df, 'json_response')
+        df = self.summarize_by_month(df, 'amount', 'created_at')
+        return df
+    
 #========================================================================================
-# Lendo arquivo csv
+# Variáveis para execução do script
 path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'src', 'csv', 'desafio'))
 file = 'events.csv'
-dataframe_events = pd.read_csv(f"{path}/{file}", sep=',', encoding='utf-8', header=0, index_col=None)
+sep = ','
+encoding = 'utf-8'
+header = 0
+index_col = 0
+month = 5
+year = 2023
+
+# Processamento dos dados
+valor_mes = SumarizacaoAmount().transform_data(month, year, path, file, sep, encoding, header, index_col)
+dataframe_events = SumarizacaoAmount().resume_by_month(path, file, sep, encoding, header, index_col)
 
 #========================================================================================
-# Transformando coluna JSON_Response em colunas
-dataframe_events = json_to_columns(dataframe_events, 'json_response')
+# Impressão dos resultados
+print(dataframe_events)
+print("#", "=" * 100, "#")
+print(f'  A soma dos valores da coluna "amount" em {str(month).rjust(2, "0")}/{year} é: {valor_mes}')
+print("#", "=" * 100, "#")
 
 #========================================================================================
-# Sumarizando os valores da coluna amount
-dataframe_events = summarize_month(dataframe_events, 'amount', 'created_at', 5, 2023)
-
-#========================================================================================
-print(dataframe_events.head())
-
+# Resultados
+#   created_at      amount
+# 0          0  1347377.47
+# 1    2023-05   114232.75
+# # ==================================================================================================== #
+#   A soma dos valores da coluna "amount" em 05/2023 é: 114232.75
+# # ==================================================================================================== #
 
