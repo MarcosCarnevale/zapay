@@ -6,6 +6,7 @@
 # Pontuação Ágil: 2 (fibonacci)                                                         #
 # Versão: 1.0                                                                           #
 # Python: 3.8.5                                                                         #
+# Git: https://github.com/MarcosCarnevale/zapay                                         #
 # ======================================================================================#
 
 # ======================================================================================
@@ -106,9 +107,7 @@ class SumarizacaoAmount:
             :return: dataframe com o tipo de dado aplicado
         """
         if self.schema:
-            print(df.columns)
             for k, v in self.schema.items():
-                print(k, v)
                 df[k] = df[k].astype(v)
         return df
     
