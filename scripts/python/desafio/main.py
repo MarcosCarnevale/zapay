@@ -90,11 +90,11 @@ schema = {
 }
 
 # Processamento dos dados
-dataframe_orders = SumarizacaoAmount(schema=schema).resume_by_month(path, file, sep, encoding, header)
+dataframe_orders = SumarizacaoAmount(schema=schema).resume_by_month(path, file, sep, encoding, header).reset_index()
 
 # Impressão dos resultados
 print("#", "=" * 100, "#", "\n", "Resultados desafio 2", "\n", "#", "=" * 100, "#")
-print(dataframe_orders)
+print(dataframe_orders.head(10))
 print("#", "=" * 100, "#", "\n", " Exportando para arquivo csv", "\n", "#", "=" * 100, "#")
 dataframe_orders.to_csv(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'out', 'orders_sumarizado.csv')), sep=';', encoding='utf-8', index=False)
 
