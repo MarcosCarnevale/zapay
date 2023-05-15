@@ -8,26 +8,6 @@
 # Python: 3.8.5                                                                         #
 # ======================================================================================#
 
-#---------------------------------------------------------------------------------------#
-# Enunciado do desafio                                                                  
-# +-----------------------------------------------------------------------------------+  
-# |  Vamos imaginar que você recebe uma demanda super importante para extrair um dado | 
-# | de uma base que ainda não foi 100% estruturada, nela, possui três campos/colunas: | 
-# | ID, Created_At e json_response.                                                   | 
-# | Precisamos entender qual o valor sumarizado da chave "amount" que esta dentro do  | 
-# | campo "json_response" para o mês de Maio/2023.                                    | 
-# | No diretório do desafio possui uma base chamada events.csv utilize ela para o     | 
-# | desenvolvimento, você pode utilizar Python e/ou SQL.                              | 
-# +-----------------------------------------------------------------------------------+ 
-
-#---------------------------------------------------------------------------------------#
-# Diretório do desafio
-# +-----------------------------------------------------------------------------------+
-# | Caminho:                                                                          |
-# | /scripts/python/desafio/sumarizacao_amount.py                                     |
-# | /scr/csv/desafio/events.csv                                                       |
-# +-----------------------------------------------------------------------------------+
-
 # ======================================================================================
 # Importando bibliotecas
 import pandas as pd 
@@ -37,8 +17,13 @@ import os
 # Definindo funções
 class SumarizacaoAmount:
 
-    def __init__(self):
-        pass
+    def __init__(self, schema=None):
+        """
+        Construtor da classe
+            :param schema: schema do dataframe (opcional)
+        """
+        self.schema = schema
+        
   
 
     def json_to_columns(self, df: pd.DataFrame, json_column: str) -> pd.DataFrame:
@@ -93,12 +78,13 @@ class SumarizacaoAmount:
         df[column_agg] = df[column_agg].astype(float)
         df = df[[column_date, column_agg]].fillna(0)
         df = df.groupby([column_date]).sum().reset_index()
+        df = df.sort_values(by=[column_date], ascending=False)
         return df
     
 
     #---------------------------------------------------------------------------------------#
 
-    def read_file(self, path: str, file: str, sep: str, encoding: str, header: int, index_col: int) -> pd.DataFrame:
+    def read_file(self, path: str, file: str, sep: str, encoding: str, header: int) -> pd.DataFrame:
         """
         Função para ler um arquivo csv
             :param path: caminho do arquivo
@@ -106,15 +92,29 @@ class SumarizacaoAmount:
             :param sep: separador
             :param encoding: encoding do arquivo
             :param header: linha do cabeçalho
-            :param index_col: coluna que será utilizada como índice
             :return: dataframe
         """
-        df = pd.read_csv(f"{path}/{file}", sep=sep, encoding=encoding, header=header, index_col=index_col)
+        df = pd.read_csv(f"{path}/{file}", sep=sep, encoding=encoding, header=header)
         return df
-
+    
+    #---------------------------------------------------------------------------------------#
+    
+    def data_type_apply(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Função para aplicar o tipo de dado em um dataframe
+            :param df: dataframe
+            :return: dataframe com o tipo de dado aplicado
+        """
+        if self.schema:
+            print(df.columns)
+            for k, v in self.schema.items():
+                print(k, v)
+                df[k] = df[k].astype(v)
+        return df
+    
     #---------------------------------------------------------------------------------------#
 
-    def transform_data(self, month: int, year: int,  path: str, file: str, sep: str, encoding: str, header: int, index_col: int) -> pd.DataFrame:
+    def transform_data(self, month: int, year: int,  path: str, file: str, sep: str, encoding: str, header: int) -> pd.DataFrame:
         """
         Função para transformar os dados
             :param month: mês
@@ -124,16 +124,16 @@ class SumarizacaoAmount:
             :param sep: separador
             :param encoding: encoding do arquivo
             :param header: linha do cabeçalho
-            :param index_col: coluna que será utilizada como índice
             :return: dataframe
             """
-        df = self.read_file(path, file, sep, encoding, header, index_col)
+        df = self.read_file(path, file, sep, encoding, header)
         df = self.json_to_columns(df, 'json_response')
+        df = self.data_type_apply(df)
         df = self.summarize_month(df, 'amount', 'created_at', month, year)
         return df
     
     #---------------------------------------------------------------------------------------#
-    def resume_by_month(self, path: str, file: str, sep: str, encoding: str, header: int, index_col: int) -> pd.DataFrame:
+    def resume_by_month(self, path: str, file: str, sep: str, encoding: str, header: int) -> pd.DataFrame:
         """
         Função para transformar os dados
             :param month: mês
@@ -143,42 +143,11 @@ class SumarizacaoAmount:
             :param sep: separador
             :param encoding: encoding do arquivo
             :param header: linha do cabeçalho
-            :param index_col: coluna que será utilizada como índice
             :return: dataframe
             """
-        df = self.read_file(path, file, sep, encoding, header, index_col)
-        df = self.json_to_columns(df, 'json_response')
+        df = self.read_file(path, file, sep, encoding, header)
+        df = self.data_type_apply(df)
         df = self.summarize_by_month(df, 'amount', 'created_at')
         return df
     
-#========================================================================================
-# Variáveis para execução do script
-path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..', 'src', 'csv', 'desafio'))
-file = 'events.csv'
-sep = ','
-encoding = 'utf-8'
-header = 0
-index_col = 0
-month = 5
-year = 2023
-
-# Processamento dos dados
-valor_mes = SumarizacaoAmount().transform_data(month, year, path, file, sep, encoding, header, index_col)
-dataframe_events = SumarizacaoAmount().resume_by_month(path, file, sep, encoding, header, index_col)
-
-#========================================================================================
-# Impressão dos resultados
-print(dataframe_events)
-print("#", "=" * 100, "#")
-print(f'  A soma dos valores da coluna "amount" em {str(month).rjust(2, "0")}/{year} é: {valor_mes}')
-print("#", "=" * 100, "#")
-
-#========================================================================================
-# Resultados
-#   created_at      amount
-# 0          0  1347377.47
-# 1    2023-05   114232.75
-# # ==================================================================================================== #
-#   A soma dos valores da coluna "amount" em 05/2023 é: 114232.75
-# # ==================================================================================================== #
-
+#========================================================================================#
